@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SUHU 素狐科技 - 文游模拟器</title>
+    <!-- 引入图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入外部样式表 -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app-container">
+    <!-- 开始界面 -->
+    <div id="start-screen">
+        <div class="logo">SUHU 素狐科技</div>
+        <h2 style="margin-bottom: 40px; color: #333;">剧本选择</h2>
+        <div class="script-card" onclick="startGame('emperor')">
+            <h3>👑 皇帝后宫模拟器</h3>
+            <p style="font-size: 12px; margin-top: 5px; opacity: 0.8;">世袭继位，皇位正统</p>
+        </div>
+    </div>
+
+    <!-- 游戏界面 -->
+    <div id="game-screen" class="hidden">
+        
+        <!-- 头部状态栏 -->
+        <div id="game-header">
+            <div class="char-info">
+                <span class="char-name">胡朝翰</span>
+                <div class="tags">
+                    <span>男</span>
+                    <span style="background: rgba(255,20,147,0.8);">世袭继位，皇位正统</span>
+                    <span>满足且掌</span>
+                </div>
+                <span class="turn-info">回合 <span id="turn-display">1</span></span>
+            </div>
+            <div id="attributes">
+                <div class="attr-item">🎂 年龄 <span id="attr-age">20</span></div>
+                <div class="attr-item">❤️ 体质 <span id="attr-hp">75</span></div>
+                <div class="attr-item">📖 才华 <span id="attr-tal">68</span></div>
+                <div class="attr-item">⚖️ 道德 <span id="attr-mor">59</span></div>
+            </div>
+        </div>
+
+        <!-- 视图区 (事件列表 / 剧情页) -->
+        <div id="views-container">
+            <!-- 事件列表视图 -->
+            <div id="event-list-view">
+                <h3 style="color: var(--primary-color); margin-bottom: 10px;">当前待处理事件</h3>
+                <div id="events-wrapper">
+                    <!-- 事件通过JS动态渲染 -->
+                </div>
+            </div>
+
+            <!-- 剧情阅读/对话视图 -->
+            <div id="story-view" class="hidden">
+                <h3 id="current-event-title" style="color: var(--primary-color); margin-bottom: 10px; border-bottom: 1px dashed; padding-bottom: 5px;"></h3>
+                <div id="narrative-content" class="narrative-box">
+                    <span class="text-content"></span>
+                </div>
+                
+                <!-- 已完成事件的总结展示 -->
+                <div id="event-completed-box" class="event-completed hidden">
+                    <strong>【事件总结】</strong><br>
+                    <span id="impact-text"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作与输入区域 (仅在剧情页显示) -->
+        <div id="action-bar" class="hidden">
+            <div id="choices-container" class="choices">
+                <!-- 选项由JS生成 -->
+            </div>
+            <div class="custom-input">
+                <input type="text" id="custom-action" placeholder="输入自定义行动...">
+                <button onclick="submitAction('custom')"><i class="fa fa-paper-plane"></i></button>
+            </div>
+        </div>
+
+        <!-- 底部导航 -->
+        <div id="bottom-nav">
+            <div class="nav-item" onclick="switchTab('story-view', this)"><i class="fa fa-book"></i>剧情</div>
+            <div class="nav-item"><i class="fa fa-users"></i>人脉</div>
+            <div class="nav-item"><i class="fa fa-user-circle"></i>属性</div>
+            <div class="nav-item active" onclick="switchTab('event-list-view', this)"><i class="fa fa-flag"></i>事件</div>
+            <div class="nav-item"><i class="fa fa-box"></i>资产</div>
+            <div class="nav-item"><i class="fa fa-cog"></i>设置</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 核心状态管理
+    const GameState = {
+        turn: 1,
+        max_turns: 229,
+        attributes: { "age": 20, "hp": 75, "tal": 68, "mor": 59 },
+        events:[
+            // 初始自带一个事件
+            { id: 'evt_01', name: '新皇登基', desc: '朝堂未稳，太后在后宫安插眼线。', turns_left: 3, completed: false }
+        ],
+        currentActiveEventId: null
+    };
+
+    let isStreaming = false;
+
+    // 开始游戏
+    function startGame(scriptId) {
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        renderEvents();
+    }
+
+    // 切换底部Tab (目前仅实现事件与剧情)
+    function switchTab(viewId, element) {
+        if(isStreaming) return; // 正在输出时禁止切换
+
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+
+        document.getElementById('event-list-view').classList.add('hidden');
+        document.getElementById('story-view').classList.add('hidden');
+        document.getElementById('action-bar').classList.add('hidden');
+
+        document.getElementById(viewId).classList.remove('hidden');
+        
+        if(viewId === 'story-view') {
+            document.getElementById('action-bar').classList.remove('hidden');
+        }
+    }
+
+    // 渲染事件列表
+    function renderEvents() {
+        const wrapper = document.getElementById('events-wrapper');
+        wrapper.innerHTML = '';
+        GameState.events.forEach(evt => {
+            if(evt.completed) return; // 只显示未完成的
+            const div = document.createElement('div');
+            div.className = 'event-item';
+            div.innerHTML = `
+                <span class="turns">剩余 ${evt.turns_left} 回合</span>
+                <h3>${evt.name}</h3>
+                <p>${evt.desc}</p>
+            `;
+            div.onclick = () => openEvent(evt.id);
+            wrapper.appendChild(div);
+        });
+    }
+
+    // 点击事件进入剧情对话
+    function openEvent(eventId) {
+        GameState.currentActiveEventId = eventId;
+        const evt = GameState.events.find(e => e.id === eventId);
+        
+        // 切换到剧情UI
+        document.querySelectorAll('.nav-item')[0].click(); 
+        
+        document.getElementById('current-event-title').innerText = `🚩 正在处理：${evt.name}`;
+        document.querySelector('.text-content').innerText = "大梦初醒，你缓缓睁开眼睛...\n请做出你的初步决断。";
+        document.getElementById('event-completed-box').classList.add('hidden');
+        
+        // 模拟大模型给出的初始选项
+        renderChoices(["召见太后", "微服私访", "批阅奏折"]);
+    }
+
+    // 渲染选项
+    function renderChoices(choices) {
+        const container = document.getElementById('choices-container');
+        container.innerHTML = '';
+        if(!choices || choices.length === 0) return;
+        
+        choices.forEach(c => {
+            const btn = document.createElement('div');
+            btn.className = 'choice-btn';
+            btn.innerText = c;
+            btn.onclick = () => submitAction('choice', c);
+            container.appendChild(btn);
+        });
+    }
+
+    // 提交玩家行动到大模型
+    async function submitAction(type, value) {
+        if (isStreaming) return;
+        
+        let playerAction = type === 'custom' ? document.getElementById('custom-action').value : value;
+        if (!playerAction) return;
+        
+        if (type === 'custom') document.getElementById('custom-action').value = '';
+
+        const evt = GameState.events.find(e => e.id === GameState.currentActiveEventId);
+        
+        // UI进入流式接收状态
+        isStreaming = true;
+        document.getElementById('choices-container').innerHTML = ''; // 清空选项
+        const contentBox = document.querySelector('.text-content');
+        contentBox.innerText = `【你选择】：${playerAction}\n\n`;
+        contentBox.classList.add('typing');
+
+        try {
+            // 调用 Flask API
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    state: GameState,
+                    input: playerAction,
+                    event: evt
+                })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let fullText = "";
+
+            // 读取流
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+                
+                for (let line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const dataStr = line.slice(6);
+                        try {
+                            const dataObj = JSON.parse(dataStr);
+                            if (dataObj.text) {
+                                fullText += dataObj.text;
+                                contentBox.innerText = `【你选择】：${playerAction}\n\n` + fullText.split('===JSON===')[0];
+                                // 自动滚到底部
+                                document.getElementById('views-container').scrollTop = document.getElementById('views-container').scrollHeight;
+                            }
+                        } catch (e) {}
+                    }
+                }
+            }
+
+            // 解析大模型返回的结尾 JSON (提取状态、选项和新事件)
+            contentBox.classList.remove('typing');
+            isStreaming = false;
+            
+            if(fullText.includes("===JSON===")) {
+                const jsonStr = fullText.split('===JSON===')[1].trim();
+                const llmResult = JSON.parse(jsonStr);
+                
+                // 1. 处理选项
+                renderChoices(llmResult.choices);
+                
+                // 2. 处理事件完结
+                if(llmResult.event_completed) {
+                    evt.completed = true;
+                    document.getElementById('choices-container').innerHTML = '';
+                    const compBox = document.getElementById('event-completed-box');
+                    compBox.classList.remove('hidden');
+                    document.getElementById('impact-text').innerText = llmResult.impact_summary;
+                    GameState.turn += 1; // 推进回合
+                    document.getElementById('turn-display').innerText = GameState.turn;
+                }
+                
+                // 3. 处理衍生新事件
+                if(llmResult.new_events && llmResult.new_events.length > 0) {
+                    GameState.events.push(...llmResult.new_events);
+                }
+                
+                // 4. 更新属性并重新渲染
+                if(llmResult.attr_changes) {
+                    GameState.attributes.hp += (llmResult.attr_changes['体质'] || 0);
+                    document.getElementById('attr-hp').innerText = GameState.attributes.hp;
+                    // 以此类推更新其他属性...
+                }
+                
+                renderEvents(); // 更新后台事件列表
+            }
+
+        } catch (error) {
+            console.error(error);
+            contentBox.innerText += "\n[系统异常，连接中断]";
+            isStreaming = false;
+            contentBox.classList.remove('typing');
+        }
+    }
+</script>
+</body>
+</html>
