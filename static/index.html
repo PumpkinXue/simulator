@@ -310,8 +310,27 @@
             isStreaming = false;
             
             if(fullText.includes("===JSON===")) {
-                const jsonStr = fullText.split('===JSON===')[1].trim();
-                const llmResult = JSON.parse(jsonStr);
+                let jsonStr = fullText.split('===JSON===')[1].trim();
+                
+                // 【新增：强力清洗大模型格式】
+                // 1. 去除大模型经常附带的 markdown 格式 (```json 和 ```)
+                jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/gi, '').trim();
+                
+                // 2. 截取最外层的 { } 确保即使大模型在后面加了废话也能提取成功
+                const startIdx = jsonStr.indexOf('{');
+                const endIdx = jsonStr.lastIndexOf('}');
+                if (startIdx !== -1 && endIdx !== -1) {
+                    jsonStr = jsonStr.substring(startIdx, endIdx + 1);
+                }
+
+                let llmResult = {};
+                try {
+                    llmResult = JSON.parse(jsonStr);
+                } catch (parseError) {
+                    console.error("JSON 解析失败! 原始提取的字符串为:", jsonStr);
+                    // 即使解析失败，也不要让整个系统崩溃，给一套默认选项
+                    llmResult = { choices:["顺其自然", "再思索一番"] }; 
+                }
                 
                 // 渲染新选项
                 renderChoices(llmResult.choices ||[]);
