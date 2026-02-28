@@ -12,10 +12,10 @@ CORS(app)
 
 # 配置大模型 (这里以DeepSeek为例，你可以换成百川、Kimi、OpenAI等)
 client = OpenAI(
-    api_key=os.getenv("LLM_API_KEY", "your-api-key"),
-    base_url=os.getenv("LLM_BASE_URL", "https://api.openai.com/v1") 
+    api_key=os.getenv("LLM_API_KEY", "sk-920d108456cb41c98e5dbadc4273826c"),
+    base_url=os.getenv("LLM_BASE_URL", "https://deepseek.com/v1") 
 )
-MODEL_NAME = os.getenv("LLM_MODEL", "gpt-3.5-turbo")
+MODEL_NAME = os.getenv("LLM_MODEL", "deepseek-chat")
 
 @app.route('/')
 def index():
