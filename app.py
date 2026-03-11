@@ -63,7 +63,7 @@ def call_deepseek(prompt, system_prompt="You are a helpful assistant."):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.8
+        "temperature": 1.2
     }
     
     response = requests.post(f"{BASE_URL}/chat/completions", headers=headers, json=data, timeout=60)
