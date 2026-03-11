@@ -140,12 +140,29 @@
     <div id="concubineModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeModal()">&times;</span>
-            <h2 id="modalName">妃子姓名</h2>
+            <h2>
+                <span id="modalName">妃子姓名</span>
+                <span class="rank-badge-large" id="modalRank">-</span>
+            </h2>
             <div class="modal-details">
                 <p><strong>性格：</strong><span id="modalPersonality">-</span></p>
                 <p><strong>简介：</strong><span id="modalIntro">-</span></p>
                 <p><strong>心境：</strong><span id="modalMood">-</span></p>
                 <p><strong>想法：</strong><span id="modalThought">-</span></p>
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <span class="stat-label">好感度：</span>
+                        <span id="modalFavorability">0</span>
+                        <div class="stat-bar-full"><div id="modalFavorabilityBar" class="stat-fill"></div></div>
+                    </div>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <span class="stat-label">真心度：</span>
+                        <span id="modalSincerity">0</span>
+                        <div class="stat-bar-full"><div id="modalSincerityBar" class="stat-fill"></div></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -154,13 +171,30 @@
     <div id="heirModal" class="modal">
         <div class="modal-content">
             <span class="close-btn" onclick="closeHeirModal()">&times;</span>
-            <h2 id="heirModalName">皇嗣姓名</h2>
+            <h2>
+                <span id="heirModalName">皇嗣姓名</span>
+                <span class="rank-badge-large" id="heirModalRank">-</span>
+            </h2>
             <div class="modal-details">
                 <p><strong>简介：</strong><span id="heirModalIntro">-</span></p>
                 <p><strong>性格：</strong><span id="heirModalPersonality">-</span></p>
                 <p><strong>生母：</strong><span id="heirModalMother">-</span></p>
                 <p><strong>心境：</strong><span id="heirModalMood">-</span></p>
                 <p><strong>想法：</strong><span id="heirModalThought">-</span></p>
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <span class="stat-label">好感度：</span>
+                        <span id="heirModalFavorability">0</span>
+                        <div class="stat-bar-full"><div id="heirModalFavorabilityBar" class="stat-fill"></div></div>
+                    </div>
+                </div>
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <span class="stat-label">真心度：</span>
+                        <span id="heirModalSincerity">0</span>
+                        <div class="stat-bar-full"><div id="heirModalSincerityBar" class="stat-fill"></div></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -176,7 +210,8 @@
 
     <script>
         let gameData = null;
-        let conversationHistory = [];
+        let conversationHistory = [];  // 最近3条原始对话
+        let conversationSummary = [];  // 更早的对话摘要（15字以内，最多20条）
         let isProcessing = false;
 
         // 页面加载时获取游戏数据（优先从localStorage读取）
@@ -278,11 +313,31 @@
                 card.className = 'concubine-card heir-card';
                 card.onclick = () => showHeirDetail(index);
 
+                const genderIcon = heir.gender === '女' ? '👧' : '👦';
+                const favorPercent = ((heir.favorability || 0) + 100) / 2;
+                const sincerePercent = ((heir.sincerity || 0) + 100) / 2;
+
+                const favorValue = heir.favorability || 0;
+                const sincereValue = heir.sincerity || 0;
+
                 card.innerHTML = `
-                    <div class="concubine-avatar">👦</div>
-                    <div class="concubine-name">${heir.name}</div>
+                    <div class="concubine-avatar">${genderIcon}</div>
+                    <div class="person-name-row">
+                        <div class="concubine-name">${heir.name}</div>
+                    </div>
+                    <div class="rank-badge">${heir.rank || ''}</div>
                     <div class="concubine-brief">${heir.personality}</div>
                     <div class="concubine-mood">心境：${heir.mood}</div>
+                    <div class="stat-values">
+                        <div class="stat-value-item favor">
+                            <span class="stat-icon">❤</span>
+                            <span class="stat-number">好感：${favorValue}</span>
+                        </div>
+                        <div class="stat-value-item sincer">
+                            <span class="stat-icon">♥</span>
+                            <span class="stat-number">真心：${sincereValue}</span>
+                        </div>
+                    </div>
                 `;
 
                 heirList.appendChild(card);
@@ -294,11 +349,27 @@
             const heir = gameData.heirs[index];
 
             document.getElementById('heirModalName').textContent = heir.name;
+            document.getElementById('heirModalRank').textContent = heir.rank || '-';
             document.getElementById('heirModalIntro').textContent = heir.intro;
             document.getElementById('heirModalPersonality').textContent = heir.personality;
             document.getElementById('heirModalMother').textContent = heir.mother || '无记载';
             document.getElementById('heirModalMood').textContent = heir.mood;
             document.getElementById('heirModalThought').textContent = heir.thought || '暂无想法';
+
+            // 好感度和真心度
+            const favor = heir.favorability || 0;
+            const sincere = heir.sincerity || 0;
+            document.getElementById('heirModalFavorability').textContent = favor;
+            document.getElementById('heirModalSincerity').textContent = sincere;
+            const favorPercent = ((favor + 100) / 2);
+            const sincerePercent = ((sincere + 100) / 2);
+            const favorBar = document.getElementById('heirModalFavorabilityBar');
+            const sincereBar = document.getElementById('heirModalSincerityBar');
+            favorBar.style.width = favorPercent + '%';
+            sincereBar.style.width = sincerePercent + '%';
+            // 根据正负值设置颜色
+            favorBar.className = 'stat-fill ' + (favor >= 0 ? 'positive' : 'negative');
+            sincereBar.className = 'stat-fill ' + (sincere >= 0 ? 'positive' : 'negative');
 
             document.getElementById('heirModal').style.display = 'block';
         }
@@ -320,11 +391,27 @@
                 card.className = 'concubine-card';
                 card.onclick = () => showConcubineDetail(index);
 
+                const favorValue = concubine.favorability || 0;
+                const sincereValue = concubine.sincerity || 0;
+
                 card.innerHTML = `
                     <div class="concubine-avatar">👩</div>
-                    <div class="concubine-name">${concubine.name}</div>
+                    <div class="person-name-row">
+                        <div class="concubine-name">${concubine.name}</div>
+                    </div>
+                    <div class="rank-badge">${concubine.rank || ''}</div>
                     <div class="concubine-brief">${concubine.personality}</div>
                     <div class="concubine-mood">心境：${concubine.mood}</div>
+                    <div class="stat-values">
+                        <div class="stat-value-item favor">
+                            <span class="stat-icon">❤</span>
+                            <span class="stat-number">好感：${favorValue}</span>
+                        </div>
+                        <div class="stat-value-item sincer">
+                            <span class="stat-icon">♥</span>
+                            <span class="stat-number">真心：${sincereValue}</span>
+                        </div>
+                    </div>
                 `;
 
                 concubineList.appendChild(card);
@@ -336,10 +423,26 @@
             const concubine = gameData.concubines[index];
 
             document.getElementById('modalName').textContent = concubine.name;
+            document.getElementById('modalRank').textContent = concubine.rank || '-';
             document.getElementById('modalPersonality').textContent = concubine.personality;
             document.getElementById('modalIntro').textContent = concubine.intro;
             document.getElementById('modalMood').textContent = concubine.mood;
             document.getElementById('modalThought').textContent = concubine.thought || '暂无想法';
+
+            // 好感度和真心度
+            const favor = concubine.favorability || 0;
+            const sincere = concubine.sincerity || 0;
+            document.getElementById('modalFavorability').textContent = favor;
+            document.getElementById('modalSincerity').textContent = sincere;
+            const favorPercent = ((favor + 100) / 2);
+            const sincerePercent = ((sincere + 100) / 2);
+            const favorBar = document.getElementById('modalFavorabilityBar');
+            const sincereBar = document.getElementById('modalSincerityBar');
+            favorBar.style.width = favorPercent + '%';
+            sincereBar.style.width = sincerePercent + '%';
+            // 根据正负值设置颜色
+            favorBar.className = 'stat-fill ' + (favor >= 0 ? 'positive' : 'negative');
+            sincereBar.className = 'stat-fill ' + (sincere >= 0 ? 'positive' : 'negative');
 
             document.getElementById('concubineModal').style.display = 'block';
         }
@@ -430,6 +533,7 @@
         // 保存当前状态用于回退
         let previousGameData = null;
         let previousConversationHistory = [];
+        let previousConversationSummary = [];
         let previousSuggestions = {};
         
         // 获取当前行动建议
@@ -441,6 +545,62 @@
                 random: document.getElementById('suggestion4').textContent
             };
         }
+
+        // 获取发送给后端的历史数据（3条原始 + 摘要）
+        function getHistoryForAPI() {
+            const result = [];
+            // 添加最近3条原始对话
+            conversationHistory.forEach(function(item) {
+                result.push({ role: item.role, content: item.content });
+            });
+            // 添加更早的摘要
+            conversationSummary.forEach(function(item) {
+                result.push({ role: item.role, content: '[摘要]' + item.summary });
+            });
+            return result;
+        }
+
+        // 更新对话历史（包含摘要机制）- 异步调用LLM生成摘要
+        async function updateConversationHistory(action, story) {
+            // 添加原始对话
+            conversationHistory.push({ role: 'user', content: action });
+            conversationHistory.push({ role: 'assistant', content: story });
+
+            // 如果超过3条，将最早的对话转为摘要（调用LLM生成）
+            while (conversationHistory.length > 3) {
+                const oldUser = conversationHistory.shift();
+                const oldAssistant = conversationHistory.shift();
+
+                // 调用后端API生成摘要
+                try {
+                    const response = await fetch('/api/generate_summary', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: oldUser.content,
+                            story: oldAssistant.content
+                        })
+                    });
+                    const result = await response.json();
+                    const summary = result.success ? result.summary : '';
+
+                    if (summary) {
+                        conversationSummary.push({
+                            role: 'summary',
+                            summary: summary,
+                            timestamp: Date.now()
+                        });
+                    }
+                } catch (e) {
+                    console.error('生成摘要失败:', e);
+                }
+            }
+
+            // 只保留最近20条摘要
+            if (conversationSummary.length > 20) {
+                conversationSummary = conversationSummary.slice(-20);
+            }
+        }
         
         // 执行行动（流式版本）
         async function executeAction(action, style) {
@@ -449,6 +609,7 @@
             // 保存当前状态用于回退（包括行动建议）
             previousGameData = JSON.parse(JSON.stringify(gameData));
             previousConversationHistory = JSON.parse(JSON.stringify(conversationHistory));
+            previousConversationSummary = JSON.parse(JSON.stringify(conversationSummary));
             previousSuggestions = getCurrentSuggestions();
             
             // 隐藏之前的属性变动和错误按钮
@@ -486,7 +647,7 @@
                         action: action,
                         style: style,
                         game_data: gameData,
-                        history: conversationHistory
+                        history: getHistoryForAPI()
                     })
                 });
                 
@@ -531,9 +692,8 @@
                         showRetryButton('使用备用方案');
                     }
                     
-                    // 更新对话历史
-                    conversationHistory.push({ role: 'user', content: action });
-                    conversationHistory.push({ role: 'assistant', content: finalData.story });
+                    // 更新对话历史（包含摘要机制）
+                    await updateConversationHistory(action, finalData.story);
                     
                     // 应用属性变动（实际更新数据+显示）
                     if (finalData.attribute_changes) {
@@ -584,6 +744,7 @@
             if (previousGameData) {
                 gameData = previousGameData;
                 conversationHistory = previousConversationHistory;
+                conversationSummary = previousConversationSummary;
 
                 // 重新显示属性
                 updateAttributeDisplay(gameData.emperor);
@@ -617,35 +778,65 @@
                 for (const [key, value] of Object.entries(changes.emperor)) {
                     if (value !== 0) {
                         const name = getAttributeName(key);
-                        changeText += `${name} ${value > 0 ? '+' : ''}${value} `;
+                        const sign = value > 0 ? '+' : '';
+                        const colorClass = value > 0 ? 'change-positive' : 'change-negative';
+                        changeText += `<span class="${colorClass}">${name} ${sign}${value}</span> `;
                     }
                 }
             }
 
-            // 妃子心境和想法变动
+            // 妃子属性变动
             if (changes.concubines) {
                 changes.concubines.forEach(change => {
-                    if (change.mood || change.thought) {
-                        changeText += `【${change.name}】`;
-                        if (change.mood) changeText += `心境→${change.mood} `;
-                        if (change.thought) changeText += `想法更新 `;
+                    let personChanges = [];
+                    if (change.mood) personChanges.push(`心境→${change.mood}`);
+                    if (change.thought) personChanges.push(`想法更新`);
+                    if (change.favorability !== undefined) {
+                        const sign = change.favorability > 0 ? '+' : '';
+                        const colorClass = change.favorability >= 0 ? 'change-positive' : 'change-negative';
+                        personChanges.push(`<span class="${colorClass}">好感${sign}${change.favorability}</span>`);
+                    }
+                    if (change.sincerity !== undefined) {
+                        const sign = change.sincerity > 0 ? '+' : '';
+                        const colorClass = change.sincerity >= 0 ? 'change-positive' : 'change-negative';
+                        personChanges.push(`<span class="${colorClass}">真心${sign}${change.sincerity}</span>`);
+                    }
+                    if (change.rank) {
+                        personChanges.push(`<span class="change-rank">晋封${change.rank}</span>`);
+                    }
+                    if (personChanges.length > 0) {
+                        changeText += `【${change.name}】${personChanges.join(' ')} `;
                     }
                 });
             }
 
-            // 皇嗣心境和想法变动
+            // 皇嗣属性变动
             if (changes.heirs) {
                 changes.heirs.forEach(change => {
-                    if (change.mood || change.thought) {
-                        changeText += `【${change.name}】`;
-                        if (change.mood) changeText += `心境→${change.mood} `;
-                        if (change.thought) changeText += `想法更新 `;
+                    let personChanges = [];
+                    if (change.mood) personChanges.push(`心境→${change.mood}`);
+                    if (change.thought) personChanges.push(`想法更新`);
+                    if (change.favorability !== undefined) {
+                        const sign = change.favorability > 0 ? '+' : '';
+                        const colorClass = change.favorability >= 0 ? 'change-positive' : 'change-negative';
+                        personChanges.push(`<span class="${colorClass}">好感${sign}${change.favorability}</span>`);
+                    }
+                    if (change.sincerity !== undefined) {
+                        const sign = change.sincerity > 0 ? '+' : '';
+                        const colorClass = change.sincerity >= 0 ? 'change-positive' : 'change-negative';
+                        personChanges.push(`<span class="${colorClass}">真心${sign}${change.sincerity}</span>`);
+                    }
+                    if (change.rank) {
+                        personChanges.push(`<span class="change-rank">晋封${change.rank}</span>`);
+                    }
+                    if (personChanges.length > 0) {
+                        changeText += `【${change.name}】${personChanges.join(' ')} `;
                     }
                 });
             }
 
             if (changeText) {
-                document.getElementById('attributeChangesText').textContent = changeText;
+                document.getElementById('attributeChangesText').innerHTML = changeText;
                 document.getElementById('attributeChanges').style.display = 'block';
             }
         }
@@ -687,7 +878,7 @@
                 updateAttributeDisplay(emperor);
             }
 
-            // 更新妃子属性（心境和想法）
+            // 更新妃子属性（心境、想法、好感度、真心度、品级）
             if (changes.concubines) {
                 changes.concubines.forEach(change => {
                     const concubine = gameData.concubines[findConcubineIndex(change.name)];
@@ -698,12 +889,21 @@
                         if (change.thought) {
                             concubine.thought = change.thought;
                         }
+                        if (change.favorability !== undefined) {
+                            concubine.favorability = Math.max(-100, Math.min(100, (concubine.favorability || 0) + change.favorability));
+                        }
+                        if (change.sincerity !== undefined) {
+                            concubine.sincerity = Math.max(-100, Math.min(100, (concubine.sincerity || 0) + change.sincerity));
+                        }
+                        if (change.rank) {
+                            concubine.rank = change.rank;
+                        }
                     }
                 });
                 displayConcubines();
             }
 
-            // 更新皇嗣属性（心境和想法）
+            // 更新皇嗣属性（心境、想法、好感度、真心度、品级）
             if (changes.heirs) {
                 changes.heirs.forEach(change => {
                     const heir = gameData.heirs[findHeirIndex(change.name)];
@@ -713,6 +913,15 @@
                         }
                         if (change.thought) {
                             heir.thought = change.thought;
+                        }
+                        if (change.favorability !== undefined) {
+                            heir.favorability = Math.max(-100, Math.min(100, (heir.favorability || 0) + change.favorability));
+                        }
+                        if (change.sincerity !== undefined) {
+                            heir.sincerity = Math.max(-100, Math.min(100, (heir.sincerity || 0) + change.sincerity));
+                        }
+                        if (change.rank) {
+                            heir.rank = change.rank;
                         }
                     }
                 });
