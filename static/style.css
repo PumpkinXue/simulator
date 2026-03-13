@@ -592,6 +592,52 @@ body {
     color: #9b59b6;
     font-weight: 600;
 }
+
+/* 精简的属性变动显示区域 */
+.attribute-changes {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 10px 0;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+/* 皇帝属性变动 */
+.change-emperor {
+    display: inline-block;
+    margin-right: 10px;
+}
+
+/* 人物变动样式 */
+.change-person {
+    display: inline-block;
+    margin: 2px 8px 2px 0;
+    white-space: nowrap;
+}
+
+/* 心境变动 */
+.change-mood {
+    color: #16a085;
+    font-weight: 500;
+}
+
+/* 想法变动 */
+.change-thought {
+    color: #8e44ad;
+}
+
+/* 好感度/真心度变动 */
+.change-favorability, .change-sincerity {
+    font-weight: 600;
+    margin: 0 3px;
+}
+
+/* 位份变动 */
+.change-rank-new {
+    color: #f39c12;
+    font-weight: 600;
+}
 .modal {
     display: none;
     position: fixed;
